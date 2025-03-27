@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Phaser Game Board</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<script type="module">
+    import { PlayerManager } from './PlayerManager.js'
+    import { BulletManager } from "./BulletManager.js";
+    const config = {
+        type: Phaser.AUTO,
+        width: 600,
+        height: 600,
+        backgroundColor: '#1e1e1e',
+        scene: {
+            create,
+            update
+        }
+    };
+
+    const lineLength = 30;
+    const game = new Phaser.Game(config);
+    const uuid = self.crypto.randomUUID();
+    const pendingBulletDeletes = new Set();
+    let keys;
+    let pointer;
+
+    //todo: update so that we are using uuid's for querying the correct game instance
+    function create() {
+        this.graphics = this.add.graphics();
+        this.treeData = null;
+        this.playerManager = null;
+        this.bulletManager = null;
+        this.isReady = false;
+
+        const socket = new SockJS('/ws');
+        const stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, () => {
+            stompClient.subscribe(`/topic/${uuid}`, (message) => {
+                const data = JSON.parse(message.body);
+
+                if (data.type === "bullet_expired" && this.bulletManager.bullets.has(data.id)) {
+                    this.bulletManager.pendingDeletes.add(data.id);
+                }
+            });
+        });
+
+            fetch(`/api/quadtree?uuid=${uuid}`, {
+                method: "POST"
+            }).then(async () =>
+            await fetch(`/api/quadtree/${uuid}`))
+                .then(res => res.json())
+                .then(data => {
+                    this.treeData = data;
+                }).then(async () => {
+                const player = {
+                    type: "player",
+                    id: "matt",
+                    health: 100.0,
+                    speed: 2.0,
+                    pointerX: 0,
+                    pointerY: 0,
+                    bounds: {
+                        x: 300.0,
+                        y: 300.0,
+                        width: 20.0,
+                        height: 20.0
+                    }
+                }
+                await fetch(`/api/quadtree/${uuid}/start`, {
+                    method: "PUT",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(player)
+                }).then(() => {
+                    this.playerManager = new PlayerManager(player, uuid)
+                    this.bulletManager = new BulletManager(uuid);
+                    console.log("setup complete")
+                    this.isReady = true;
+                })
+            });
+
+        this.input.on("pointerdown", () => {
+            const angle = Phaser.Math.Angle.Between(
+                this.playerManager.bounds.x, this.playerManager.bounds.y,
+                pointer.worldX, pointer.worldY
+            );
+            this.bulletManager.fireBullet(this.playerManager.bounds.x, this.playerManager.bounds.y, angle, self.crypto.randomUUID());
+        })
+
+        // draw game board boundary (same as QuadTree visualizer size)
+        this.graphics.lineStyle(2, 0x007acc);
+        this.graphics.strokeRect(0, 0, 600, 600);
+
+        // input keys
+        keys = this.input.keyboard.addKeys('W,A,S,D');
+        // this.input.on("pointermove", async (pointer) => movePlayerPointer(pointer));
+        pointer = this.input.activePointer;
+        setInterval(() => syncWithServer(this), 50);
+    }
+
+    async function syncWithServer(scene) {
+        const response = await fetch(`/api/quadtree/${uuid}`)
+        const treeData = await response.json();
+        scene.treeData = treeData;
+        const serverPlayer = treeData.objects.find(object => object.id === scene.playerManager.id)
+        if (serverPlayer) {
+            scene.playerManager.updateFromServer(serverPlayer);
+        }
+    }
+
+    function update() {
+        if (!this.isReady) return;
+        this.playerManager.updateInput(keys, pointer);
+
+        // Redraw player and line
+        this.graphics.clear();
+
+        if (this.treeData) {
+            drawTree(this.graphics, this.treeData, this);
+        }
+
+        this.bulletManager.update();
+        this.bulletManager.draw(this.graphics);
+        this.playerManager.draw(this.graphics);
+    }
+
+    function drawTree(g, tree, scene) {
+        if (tree.objects) {
+            for (let obj of tree.objects) {
+                if (obj.type === "player" && obj.id === scene.playerManager.id) {
+                    continue;
+                }
+                if (obj.type === "player") {
+                    g.fillStyle(0x44ff44);
+                    g.fillCircle(obj.bounds.x, obj.bounds.y, 20);
+
+                    // Draw direction line
+                    g.lineStyle(2, 0xffffff);
+                    g.beginPath();
+                    g.moveTo(obj.bounds.x, obj.bounds.y);
+                    g.lineTo(obj.pointerX, obj.pointerY);
+                    g.strokePath();
+                }
+
+                // existing bullet set targetX and targetY, signifies the server position of the bullet
+                if (obj.type === "bullet" && scene.bulletManager.bullets.has(obj.id)) {
+                    let bullet = scene.bulletManager.bullets.get(obj.id);
+                    bullet.targetX = obj.bounds.x;
+                    bullet.targetY = obj.bounds.y;
+                }
+
+                // new bullet
+                if (obj.type === "bullet" && !scene.bulletManager.bullets.has(obj.id)) {
+                    scene.bulletManager.bullets.set(obj.id, {
+                        ...obj,
+                        targetX: null,
+                        targetY: null
+                    })
+                }
+            }
+
+            if (tree.children) {
+                for (let child of tree.children) {
+                    drawTree(g, child, scene);
+                }
+            }
+        }
+    }
+</script>
+
+</body>
+</html>

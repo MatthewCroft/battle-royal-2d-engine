@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>QuadTree Visualizer - Phaser</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+
+<script>
+  const config = {
+    type: Phaser.AUTO,
+    width: 600,
+    height: 600,
+    backgroundColor: '#f0f0f0',
+    scene: {
+      create,
+      update
+    }
+  };
+
+  const game = new Phaser.Game(config);
+
+  async function create() {
+    this.graphics = this.add.graphics();
+    this.objects = [];
+
+    this.input.on('pointerdown', async (pointer) => {
+      const size = 20;
+      const obj = {
+        bounds: {
+          x: pointer.x - size / 2,
+          y: pointer.y - size / 2,
+          width: size,
+          height: size
+        }
+      };
+
+      await fetch("/api/quadtree/1", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(obj)
+      })
+
+      await fetchTree(this);
+    });
+
+    await fetchTree(this);
+  }
+
+  async function fetchTree(scene) {
+    const response = await fetch("/api/quadtree/1");
+    const data = await response.json();
+    scene.treeData = data;
+  }
+
+  function update() {
+    this.graphics.clear();
+
+    if (this.treeData) {
+      drawNode(this.graphics, this.treeData);
+    }
+  }
+
+  function drawNode(g, node) {
+    if (node.objects) {
+      for (let obj of node.objects) {
+        g.fillStyle(0xff4444);
+        g.fillRect(obj.x, obj.y, obj.width, obj.height);
+      }
+    }
+
+    g.lineStyle(1, 0x007acc);
+    g.strokeRect(node.bounds.x, node.bounds.y, node.bounds.width, node.bounds.height);
+
+    if (node.children) {
+      for (let child of node.children) {
+        drawNode(g, child);
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
+
+
+
+
