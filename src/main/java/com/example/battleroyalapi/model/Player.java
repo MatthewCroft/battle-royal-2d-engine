@@ -4,20 +4,23 @@ import com.example.battleroyalapi.quadtree.Bounds;
 import com.example.battleroyalapi.quadtree.QuadTreeObject;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
-@JsonTypeName("player")
 public class Player extends QuadTreeObject {
     double health;
     double speed;
     double pointerX;
     double pointerY;
     double radius;
-    public Player(String id, double health, double speed, double pointerX, double pointerY, Bounds bounds, double radius) {
-        super(id, bounds);
+    double centerX;
+    double centerY;
+    public Player(String id, double health, double speed, double pointerX, double pointerY, double centerX, double centerY, double radius) {
+        super(id, new Bounds(centerX - radius, centerY - radius, radius * 2, radius * 2), ObjectType.PLAYER);
         this.health = health;
         this.speed = speed;
         this.pointerX = pointerX;
         this.pointerY = pointerY;
         this.radius = radius;
+        this.centerX = centerX;
+        this.centerY  = centerY;
     }
 
     public double getHealth() {
@@ -38,5 +41,13 @@ public class Player extends QuadTreeObject {
 
     public double getRadius() {
         return radius;
+    }
+
+    public double getCenterX() {
+        return centerX;
+    }
+
+    public double getCenterY() {
+        return centerY;
     }
 }

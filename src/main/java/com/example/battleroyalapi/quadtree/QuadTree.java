@@ -60,15 +60,15 @@ public class QuadTree {
 
     public List<QuadTreeObject> queryIntersecting(QuadTreeObject range) {
         List<QuadTreeObject> intersectingNodes = new ArrayList<>();
-        queryIntersecting(range.bounds, intersectingNodes);
+        queryIntersecting(range, intersectingNodes);
         return intersectingNodes;
     }
 
-    private void queryIntersecting(Bounds range, List<QuadTreeObject> intersectingNodes) {
-        if (!this.bounds.intersects(range)) return;
+    private void queryIntersecting(QuadTreeObject range, List<QuadTreeObject> intersectingNodes) {
+        if (!this.bounds.intersects(range.bounds)) return;
 
         for (QuadTreeObject object : this.objects) {
-            if (object.bounds.intersects(range)) {
+            if (!range.equals(object) && object.bounds.intersects(range.bounds)) {
                 intersectingNodes.add(object);
             }
         }

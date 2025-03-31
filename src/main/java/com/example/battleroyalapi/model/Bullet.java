@@ -4,7 +4,6 @@ import com.example.battleroyalapi.quadtree.Bounds;
 import com.example.battleroyalapi.quadtree.QuadTreeObject;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
-@JsonTypeName("bullet")
 public class Bullet extends QuadTreeObject {
     double velocityX;
     double velocityY;
@@ -12,19 +11,25 @@ public class Bullet extends QuadTreeObject {
     Double targetX;
     Double targetY;
     double radius;
+    double centerX;
+    double centerY;
 
-    public Bullet(String id, Bounds bounds, double velocityX, double velocityY, double angle, Double targetX, Double targetY, double radius) {
-        super(id, bounds);
+    public Bullet(String id, double velocityX, double velocityY, double angle, Double targetX, Double targetY, double radius, double centerX, double centerY) {
+        super(id, new Bounds(centerX - radius, centerY - radius, radius*2, radius*2), ObjectType.BULLET);
         this.velocityX = velocityX;
         this.velocityY = velocityY;
         this.angle = angle;
         this.targetX = targetX;
         this.targetY = targetY;
+        this.centerX = centerX;
+        this.centerY = centerY;
     }
 
     public void update() {
-        this.bounds.x += this.velocityX;
-        this.bounds.y += this.velocityY;
+        this.centerX += this.velocityX;
+        this.centerY += this.velocityY;
+        this.bounds.x = this.centerX - this.radius;
+        this.bounds.y = this.centerY - this.radius;
     }
 
     public double getVelocityX() {
@@ -37,5 +42,25 @@ public class Bullet extends QuadTreeObject {
 
     public double getAngle() {
         return angle;
+    }
+
+    public Double getTargetX() {
+        return targetX;
+    }
+
+    public Double getTargetY() {
+        return targetY;
+    }
+
+    public double getRadius() {
+        return radius;
+    }
+
+    public double getCenterX() {
+        return centerX;
+    }
+
+    public double getCenterY() {
+        return centerY;
     }
 }

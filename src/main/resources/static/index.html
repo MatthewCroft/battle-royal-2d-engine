@@ -69,18 +69,15 @@
                     this.treeData = data;
                 }).then(async () => {
                 const player = {
-                    type: "player",
+                    type: "PLAYER",
                     id: "matt",
                     health: 100.0,
                     speed: 2.0,
                     pointerX: 0,
                     pointerY: 0,
-                    bounds: {
-                        x: 300.0,
-                        y: 300.0,
-                        width: 20.0,
-                        height: 20.0
-                    }
+                    centerX: 300.0,
+                    centerY: 300.0,
+                    radius: 20.0
                 }
                 await fetch(`/api/quadtree/${uuid}/start`, {
                     method: "PUT",
@@ -98,10 +95,10 @@
 
         this.input.on("pointerdown", () => {
             const angle = Phaser.Math.Angle.Between(
-                this.playerManager.bounds.x, this.playerManager.bounds.y,
+                this.playerManager.centerX, this.playerManager.centerY,
                 pointer.worldX, pointer.worldY
             );
-            this.bulletManager.fireBullet(this.playerManager.bounds.x, this.playerManager.bounds.y, angle, self.crypto.randomUUID());
+            this.bulletManager.fireBullet(this.playerManager.centerX, this.playerManager.centerY, angle, self.crypto.randomUUID());
         })
 
         // draw game board boundary (same as QuadTree visualizer size)
@@ -144,30 +141,30 @@
     function drawTree(g, tree, scene) {
         if (tree.objects) {
             for (let obj of tree.objects) {
-                if (obj.type === "player" && obj.id === scene.playerManager.id) {
+                if (obj.type === "PLAYER" && obj.id === scene.playerManager.id) {
                     continue;
                 }
-                if (obj.type === "player") {
+                if (obj.type === "PLAYER") {
                     g.fillStyle(0x44ff44);
-                    g.fillCircle(obj.bounds.x, obj.bounds.y, 20);
+                    g.fillCircle(obj.centerX, obj.centerY, 20);
 
                     // Draw direction line
                     g.lineStyle(2, 0xffffff);
                     g.beginPath();
-                    g.moveTo(obj.bounds.x, obj.bounds.y);
+                    g.moveTo(obj.centerX, obj.centerY);
                     g.lineTo(obj.pointerX, obj.pointerY);
                     g.strokePath();
                 }
 
                 // existing bullet set targetX and targetY, signifies the server position of the bullet
-                if (obj.type === "bullet" && scene.bulletManager.bullets.has(obj.id)) {
+                if (obj.type === "BULLET" && scene.bulletManager.bullets.has(obj.id)) {
                     let bullet = scene.bulletManager.bullets.get(obj.id);
-                    bullet.targetX = obj.bounds.x;
-                    bullet.targetY = obj.bounds.y;
+                    bullet.targetX = obj.centerX;
+                    bullet.targetY = obj.centerY;
                 }
 
                 // new bullet
-                if (obj.type === "bullet" && !scene.bulletManager.bullets.has(obj.id)) {
+                if (obj.type === "BULLET" && !scene.bulletManager.bullets.has(obj.id)) {
                     scene.bulletManager.bullets.set(obj.id, {
                         ...obj,
                         targetX: null,

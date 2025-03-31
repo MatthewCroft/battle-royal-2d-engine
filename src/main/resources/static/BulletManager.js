@@ -8,20 +8,21 @@ export class BulletManager {
         this.pendingDeletes = new Set();
     }
     async fireBullet(x, y, angle, bulletId) {
+        const offset = 30;
+        const bulletX = x + Math.cos(angle) * offset;
+        const bulletY = y + Math.sin(angle) * offset;
+
         const bullet = {
-            type: "bullet",
+            type: "BULLET",
             angle,
             velocityX: Math.cos(angle) * this.speed,
             velocityY: Math.sin(angle) * this.speed,
             id: bulletId,
             targetX: null,
             targetY: null,
-            bounds: {
-                x,
-                y,
-                width: 5,
-                height: 5
-            }
+            centerX: bulletX,
+            centerY: bulletY,
+            radius: this.radius
         };
 
         this.bullets.set(bulletId, bullet);
@@ -41,13 +42,13 @@ export class BulletManager {
                 this.bullets.delete(bullet.id);
             }
 
-            bullet.bounds.x += bullet.velocityX;
-            bullet.bounds.y += bullet.velocityY;
+            bullet.centerX += bullet.velocityX;
+            bullet.centerY += bullet.velocityY;
 
             if (bullet.targetX !== null && bullet.targetY !== null
-                && this.distance(bullet.targetX, bullet.bounds.x, bullet.targetY, bullet.bounds.y) > 5) {
-                bullet.bounds.x = Phaser.Math.Linear(bullet.bounds.x, bullet.targetX, 0.1);
-                bullet.bounds.y = Phaser.Math.Linear(bullet.bounds.y, bullet.targetY, 0.1);
+                && this.distance(bullet.targetX, bullet.centerX, bullet.targetY, bullet.centerY) > 5) {
+                bullet.centerX = Phaser.Math.Linear(bullet.centerX, bullet.targetX, 0.1);
+                bullet.centerY = Phaser.Math.Linear(bullet.centerY, bullet.targetY, 0.1);
             }
         }
     }
@@ -61,7 +62,7 @@ export class BulletManager {
     draw(graphics) {
         for (let bullet of this.bullets.values()) {
             graphics.fillStyle(0xffff00);
-            graphics.fillCircle(bullet.bounds.x, bullet.bounds.y, this.radius);
+            graphics.fillCircle(bullet.centerX, bullet.centerY, this.radius);
         }
     }
 }

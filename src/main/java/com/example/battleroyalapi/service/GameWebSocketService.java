@@ -23,4 +23,18 @@ public class GameWebSocketService {
                 )
         );
     }
+
+    public void sendWallCollision(String gameId) {
+        messagingTemplate.convertAndSend(
+                "/topic/" + gameId,
+                Map.of("type", "wall_collision")
+        );
+    }
+
+    public void sendPlayerCollision(String gameId) {
+        messagingTemplate.convertAndSend(
+                "/topic/" + gameId,
+                Map.of("type", "player_collision")
+        );
+    }
 }

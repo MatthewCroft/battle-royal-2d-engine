@@ -1,20 +1,23 @@
 package com.example.battleroyalapi.service;
 
-import com.example.battleroyalapi.model.Bullet;
-import com.example.battleroyalapi.model.GameInstance;
-import com.example.battleroyalapi.model.GameManager;
+import com.example.battleroyalapi.model.*;
 import com.example.battleroyalapi.quadtree.QuadTree;
+import com.example.battleroyalapi.quadtree.QuadTreeObject;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class BulletSimulator {
     private GameManager gameManager;
     private GameWebSocketService gameWebSocketService;
+    private CollisionService collisionService;
 
-    public BulletSimulator(GameManager gameManager, GameWebSocketService gameWebSocketService) {
+    public BulletSimulator(GameManager gameManager, GameWebSocketService gameWebSocketService, CollisionService collisionService) {
         this.gameManager = gameManager;
         this.gameWebSocketService = gameWebSocketService;
+        this.collisionService = collisionService;
     }
 
     @Scheduled(fixedRate = 16)
@@ -30,6 +33,30 @@ public class BulletSimulator {
                     if(!tree.insert(bullet)) {
                         gameWebSocketService.sendBulletExpired(gameInstanceKey, bullet.id);
                         gameInstance.bullets.remove(bullet);
+                        continue;
+                    }
+                    List<QuadTreeObject> collisions = tree.queryIntersecting(bullet);
+                    for (QuadTreeObject collision : collisions) {
+                        System.out.println(collision.type);
+                        switch (collision.type) {
+                            case ObjectType.PLAYER -> {
+                               Player player = (Player) collision;
+                               //todo: update players health
+                               if (collisionService.isCircleCircleIntersecting(new Circle(player.getCenterX(), player.getCenterY(), player.getRadius()), new Circle(bullet.getCenterX(), bullet.getCenterY(), bullet.getRadius()))) {
+                                  gameWebSocketService.sendBulletExpired(gameInstanceKey, bullet.id);
+                                  gameInstance.bullets.remove(bullet);
+                                  tree.remove(bullet);
+                               }
+                            }
+                            case ObjectType.WALL -> {
+                                if (collisionService.isCircleRectangleInsecting(new Circle(bullet.getCenterX(), bullet.getCenterY(), bullet.getRadius()), new Rectangle(collision.bounds.getX(), collision.bounds.getY(), collision.bounds.getHeight(), collision.bounds.getWidth()))) {
+                                    gameWebSocketService.sendBulletExpired(gameInstanceKey, bullet.id);
+                                    gameInstance.bullets.remove(bullet);
+                                    tree.remove(bullet);
+                                }
+                            }
+                            default -> System.out.println("Collision not a valid type");
+                        }
                     }
                 }
             } finally {

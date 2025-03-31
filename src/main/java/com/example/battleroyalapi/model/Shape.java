@@ -1,4 +1,3 @@
 package com.example.battleroyalapi.model;
 
-public class Walls {
-}
+public abstract class Shape { }

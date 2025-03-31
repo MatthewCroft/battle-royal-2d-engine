@@ -1,47 +1,44 @@
 export class PlayerManager {
     constructor(player, treeUUID) {
         this.treeUUID = treeUUID;
-        this.type = "player";
+        this.type = "PLAYER";
         this.id = player.id;
         this.health = player.health;
         this.speed = player.speed;
         this.pointerX = player.pointerX;
         this.pointerY = player.pointerY;
-        this.bounds = {
-            x: player.bounds.x,
-            y: player.bounds.y,
-            width: player.bounds.width,
-            height: player.bounds.height
-        }
+        this.centerX = player.centerX;
+        this.centerY = player.centerY;
+        this.radius = player.radius
     }
 
     updateInput(keys, pointer) {
-        const prevX = this.bounds.x;
-        const prevY = this.bounds.y;
-        let currentX = this.bounds.x;
-        let currentY = this.bounds.y;
+        const prevX = this.centerX;
+        const prevY = this.centerY;
+        let currentX = this.centerX;
+        let currentY = this.centerY;
         let currentPointerX;
         let currentPointerY;
         const prevPointerX = this.pointerX;
         const prevPointerY = this.pointerY;
 
         // the client player will update when the server responds
-        if (keys.W.isDown) currentY = this.bounds.y - this.speed;
-        if (keys.S.isDown) currentY = this.bounds.y + this.speed;
-        if (keys.A.isDown) currentX = this.bounds.x - this.speed;
-        if (keys.D.isDown) currentX = this.bounds.x + this.speed;
+        if (keys.W.isDown) currentY = this.centerY - this.speed;
+        if (keys.S.isDown) currentY = this.centerY + this.speed;
+        if (keys.A.isDown) currentX = this.centerX - this.speed;
+        if (keys.D.isDown) currentX = this.centerX + this.speed;
 
-        const angle = Phaser.Math.Angle.Between(this.bounds.x, this.bounds.y, pointer.worldX, pointer.worldY);
-        currentPointerX = this.bounds.x + Math.cos(angle) * 25;
-        currentPointerY = this.bounds.y + Math.sin(angle) * 25;
+        const angle = Phaser.Math.Angle.Between(this.centerX, this.centerY, pointer.worldX, pointer.worldY);
+        currentPointerX = this.centerX + Math.cos(angle) * 25;
+        currentPointerY = this.centerY + Math.sin(angle) * 25;
         const withinBounds = currentX >= 0 && currentX <= 600 &&
             currentY >= 0 && currentY <= 600;
         if (withinBounds && (parseInt(currentX) !== parseInt(prevX) || parseInt(currentY) !== parseInt(prevY) ||
             parseInt(prevPointerY) !== parseInt(currentPointerY) || parseInt(prevPointerX) !== parseInt(currentPointerX))) {
             this.sendPlayerMoveUpdate(currentX, currentY,
                 currentPointerX, currentPointerY);
-            this.bounds.x = currentX;
-            this.bounds.y = currentY;
+            this.centerX = currentX;
+            this.centerY = currentY;
             this.pointerY = currentPointerY;
             this.pointerX = currentPointerX;
         }
@@ -50,17 +47,14 @@ export class PlayerManager {
     async sendPlayerMoveUpdate(currentX, currentY, pointerX, pointerY) {
         const playerObj = {
             id: this.id,
-            type: "player",
+            type: this.type,
             health: this.health,
             speed: this.speed,
             pointerX: pointerX,
             pointerY: pointerY,
-            bounds: {
-                x: currentX,
-                y: currentY,
-                width: this.bounds.width,
-                height: this.bounds.height
-            }
+            centerX: currentX,
+            centerY: currentY,
+            radius: this.radius
         };
 
         await fetch(`/api/quadtree/${this.treeUUID}/player`, {
@@ -73,16 +67,16 @@ export class PlayerManager {
     }
 
     updateFromServer(serverPlayer) {
-        const dx = serverPlayer.bounds.x - this.bounds.x;
-        const dy = serverPlayer.bounds.y - this.bounds.y;
+        const dx = serverPlayer.centerX - this.centerX;
+        const dy = serverPlayer.centerY - this.centerY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 5) {
-            this.bounds.x = Phaser.Math.Linear(this.bounds.x, serverPlayer.bounds.x, 0.2);
-            this.bounds.y = Phaser.Math.Linear(this.bounds.y, serverPlayer.bounds.y, 0.2);
+            this.centerX = Phaser.Math.Linear(this.centerX, serverPlayer.centerX, 0.2);
+            this.centerY = Phaser.Math.Linear(this.centerY, serverPlayer.centerY, 0.2);
         } else {
-            this.bounds.x = serverPlayer.bounds.x;
-            this.bounds.y = serverPlayer.bounds.y;
+            this.centerX = serverPlayer.centerX;
+            this.centerY = serverPlayer.centerY;
         }
 
         const pointerDX = serverPlayer.pointerX - this.pointerX;
@@ -102,12 +96,12 @@ export class PlayerManager {
 
     draw(graphics) {
         graphics.fillStyle(0x44ff44);
-        graphics.fillCircle(this.bounds.x, this.bounds.y, 20);
+        graphics.fillCircle(this.centerX, this.centerY, 20);
 
         // Draw direction line
         graphics.lineStyle(2, 0xffffff);
         graphics.beginPath();
-        graphics.moveTo(this.bounds.x, this.bounds.y);
+        graphics.moveTo(this.centerX, this.centerY);
         graphics.lineTo(this.pointerX, this.pointerY);
         graphics.strokePath();
     }
