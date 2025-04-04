@@ -37,12 +37,12 @@ public class BulletSimulator {
                     }
                     List<QuadTreeObject> collisions = tree.queryIntersecting(bullet);
                     for (QuadTreeObject collision : collisions) {
-                        System.out.println(collision.type);
                         switch (collision.type) {
                             case ObjectType.PLAYER -> {
                                Player player = (Player) collision;
-                               //todo: update players health
                                if (collisionService.isCircleCircleIntersecting(new Circle(player.getCenterX(), player.getCenterY(), player.getRadius()), new Circle(bullet.getCenterX(), bullet.getCenterY(), bullet.getRadius()))) {
+                                  player.health -= 10;
+                                  gameWebSocketService.sendPlayerHitUpdate(gameInstanceKey, player, bullet.getPlayer());
                                   gameWebSocketService.sendBulletExpired(gameInstanceKey, bullet.id);
                                   gameInstance.bullets.remove(bullet);
                                   tree.remove(bullet);

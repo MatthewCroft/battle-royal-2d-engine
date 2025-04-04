@@ -81,6 +81,23 @@ public class QuadTree {
         }
     }
 
+    public QuadTreeObject query(QuadTreeObject object) {
+        int index;
+        if ((index = objects.indexOf(object)) != -1) {
+            return objects.get(index);
+        }
+
+        if (this.subdivide) {
+            QuadTreeObject found = null;
+            return (found = this.ne.query(object)) != null ||
+                    (found = this.nw.query(object)) != null ||
+                    (found = this.se.query(object)) != null ||
+                    (found = this.sw.query(object)) != null ? found : null;
+        }
+
+        return null;
+    }
+
     public QuadTreeObject remove(QuadTreeObject object) {
         int index;
         if (!this.bounds.intersects(object.bounds)) return null;

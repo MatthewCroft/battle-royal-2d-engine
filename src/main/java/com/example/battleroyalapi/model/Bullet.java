@@ -13,8 +13,9 @@ public class Bullet extends QuadTreeObject {
     double radius;
     double centerX;
     double centerY;
+    String player;
 
-    public Bullet(String id, double velocityX, double velocityY, double angle, Double targetX, Double targetY, double radius, double centerX, double centerY) {
+    public Bullet(String id, double velocityX, double velocityY, double angle, Double targetX, Double targetY, double radius, double centerX, double centerY, String player) {
         super(id, new Bounds(centerX - radius, centerY - radius, radius*2, radius*2), ObjectType.BULLET);
         this.velocityX = velocityX;
         this.velocityY = velocityY;
@@ -23,6 +24,7 @@ public class Bullet extends QuadTreeObject {
         this.targetY = targetY;
         this.centerX = centerX;
         this.centerY = centerY;
+        this.player = player;
     }
 
     public void update() {
@@ -62,5 +64,9 @@ public class Bullet extends QuadTreeObject {
 
     public double getCenterY() {
         return centerY;
+    }
+
+    public String getPlayer() {
+        return player;
     }
 }

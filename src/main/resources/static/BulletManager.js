@@ -7,7 +7,7 @@ export class BulletManager {
         this.bullets = new Map();
         this.pendingDeletes = new Set();
     }
-    async fireBullet(x, y, angle, bulletId) {
+    async fireBullet(x, y, angle, bulletId, playerId) {
         const offset = 30;
         const bulletX = x + Math.cos(angle) * offset;
         const bulletY = y + Math.sin(angle) * offset;
@@ -22,7 +22,8 @@ export class BulletManager {
             targetY: null,
             centerX: bulletX,
             centerY: bulletY,
-            radius: this.radius
+            radius: this.radius,
+            player: playerId
         };
 
         this.bullets.set(bulletId, bullet);
@@ -36,11 +37,30 @@ export class BulletManager {
         })
     }
 
-    update() {
+    update(barriers, opponents) {
         for (let bullet of this.bullets.values()) {
             if (this.pendingDeletes.has(bullet.id)) {
                 this.bullets.delete(bullet.id);
+                continue;
             }
+
+            //todo: update so that server can respawn bullets if intersecting from phaser does not agree with server
+            const bulletCircle = new Phaser.Geom.Circle(bullet.centerX, bullet.centerY, bullet.radius);
+            for (const barrier of barriers.values()) {
+                if (Phaser.Geom.Intersects.CircleToRectangle(bulletCircle, barrier)) {
+                    this.bullets.delete(bullet.id);
+                    break;
+                }
+            }
+
+            for (const opponent of opponents.values()) {
+                if (Phaser.Geom.Intersects.CircleToCircle(bulletCircle, opponent)) {
+                    this.bullets.delete(bullet.id);
+                    break;
+                }
+            }
+
+            if (!this.bullets.has(bullet.id)) continue;
 
             bullet.centerX += bullet.velocityX;
             bullet.centerY += bullet.velocityY;
@@ -61,6 +81,7 @@ export class BulletManager {
 
     draw(graphics) {
         for (let bullet of this.bullets.values()) {
+            if (this.pendingDeletes.has(bullet.id)) continue;
             graphics.fillStyle(0xffff00);
             graphics.fillCircle(bullet.centerX, bullet.centerY, this.radius);
         }

@@ -5,14 +5,15 @@ import com.example.battleroyalapi.quadtree.QuadTreeObject;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
 public class Player extends QuadTreeObject {
-    double health;
+    public double health;
     double speed;
     double pointerX;
     double pointerY;
     double radius;
-    double centerX;
-    double centerY;
-    public Player(String id, double health, double speed, double pointerX, double pointerY, double centerX, double centerY, double radius) {
+    public double centerX;
+    public double centerY;
+    public double zoneTime;
+    public Player(String id, double health, double speed, double pointerX, double pointerY, double centerX, double centerY, double radius, double zoneTime) {
         super(id, new Bounds(centerX - radius, centerY - radius, radius * 2, radius * 2), ObjectType.PLAYER);
         this.health = health;
         this.speed = speed;
@@ -21,6 +22,7 @@ public class Player extends QuadTreeObject {
         this.radius = radius;
         this.centerX = centerX;
         this.centerY  = centerY;
+        this.zoneTime = zoneTime;
     }
 
     public double getHealth() {

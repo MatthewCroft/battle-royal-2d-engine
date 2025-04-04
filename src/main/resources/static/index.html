@@ -46,6 +46,8 @@
         this.playerManager = null;
         this.bulletManager = null;
         this.isReady = false;
+        this.barriers = new Map();
+        this.opponents = new Map();
 
         const socket = new SockJS('/ws');
         const stompClient = Stomp.over(socket);
@@ -56,6 +58,14 @@
 
                 if (data.type === "bullet_expired" && this.bulletManager.bullets.has(data.id)) {
                     this.bulletManager.pendingDeletes.add(data.id);
+                }
+                // play sound
+                if (data.type === "player_hit") {
+                }
+
+                if (data.type === "player_collision" || data.type === "out_of_bounds" || data.type === "wall_collision") {
+                    this.playerManager = new PlayerManager(data.player, uuid);
+                    this.playerManager.collisionCorrectionTime = performance.now() + 50;
                 }
             });
         });
@@ -75,10 +85,32 @@
                     speed: 2.0,
                     pointerX: 0,
                     pointerY: 0,
-                    centerX: 300.0,
-                    centerY: 300.0,
-                    radius: 20.0
+                    centerX: 40.0,
+                    centerY: 570.0,
+                    radius: 20.0,
+                    zoneTime: 0
                 }
+                const opponent = {
+                    type: "PLAYER",
+                    id: "opponent",
+                    health: 100.0,
+                    speed: 2.0,
+                    pointerX: 0,
+                    pointerY: 0,
+                    centerX: 30.0,
+                    centerY: 30.0,
+                    radius: 20.0,
+                    zoneTime: 0
+                }
+
+                await fetch(`/api/quadtree/${uuid}/start`, {
+                    method: "PUT",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(opponent)
+                })
+
                 await fetch(`/api/quadtree/${uuid}/start`, {
                     method: "PUT",
                     headers: {
@@ -98,7 +130,7 @@
                 this.playerManager.centerX, this.playerManager.centerY,
                 pointer.worldX, pointer.worldY
             );
-            this.bulletManager.fireBullet(this.playerManager.centerX, this.playerManager.centerY, angle, self.crypto.randomUUID());
+            this.bulletManager.fireBullet(this.playerManager.centerX, this.playerManager.centerY, angle, self.crypto.randomUUID(), this.playerManager.id);
         })
 
         // draw game board boundary (same as QuadTree visualizer size)
@@ -116,7 +148,7 @@
         const response = await fetch(`/api/quadtree/${uuid}`)
         const treeData = await response.json();
         scene.treeData = treeData;
-        const serverPlayer = treeData.objects.find(object => object.id === scene.playerManager.id)
+        const serverPlayer = treeData.objects.find(object => object && object.id === scene.playerManager.id)
         if (serverPlayer) {
             scene.playerManager.updateFromServer(serverPlayer);
         }
@@ -133,7 +165,7 @@
             drawTree(this.graphics, this.treeData, this);
         }
 
-        this.bulletManager.update();
+        this.bulletManager.update(this.barriers, this.opponents);
         this.bulletManager.draw(this.graphics);
         this.playerManager.draw(this.graphics);
     }
@@ -141,19 +173,15 @@
     function drawTree(g, tree, scene) {
         if (tree.objects) {
             for (let obj of tree.objects) {
+                if (!obj) continue;
                 if (obj.type === "PLAYER" && obj.id === scene.playerManager.id) {
                     continue;
                 }
+                // todo: draw player with health updates
                 if (obj.type === "PLAYER") {
-                    g.fillStyle(0x44ff44);
-                    g.fillCircle(obj.centerX, obj.centerY, 20);
-
-                    // Draw direction line
-                    g.lineStyle(2, 0xffffff);
-                    g.beginPath();
-                    g.moveTo(obj.centerX, obj.centerY);
-                    g.lineTo(obj.pointerX, obj.pointerY);
-                    g.strokePath();
+                    const playerCircle = new Phaser.Geom.Circle(obj.centerX, obj.centerY, obj.radius);
+                    scene.opponents.set(obj.id, playerCircle);
+                    drawPlayer(obj, g);
                 }
 
                 // existing bullet set targetX and targetY, signifies the server position of the bullet
@@ -171,6 +199,16 @@
                         targetY: null
                     })
                 }
+
+                if (obj.type === "ZONE") {
+                    drawZone(obj, g);
+                }
+
+                if (obj.type === "WALL") {
+                    const wallBounds = new Phaser.Geom.Rectangle(obj.bounds.x, obj.bounds.y, obj.bounds.width, obj.bounds.height);
+                    scene.barriers.set(obj.id, wallBounds);
+                    drawWall(obj, g);
+                }
             }
 
             if (tree.children) {
@@ -179,6 +217,47 @@
                 }
             }
         }
+    }
+
+    function drawZone(zone, g) {
+        g.lineStyle(2, 0xffffff); // thickness = 2, color = white
+        g.strokeCircle(zone.centerX, zone.centerY, zone.radius);
+    }
+
+    function drawWall(wall, g) {
+        const { x, y, width, height } = wall.bounds;
+
+        g.fillStyle(0x888888); // grey fill color
+        g.fillRect(x, y, width, height); // draw the wall
+    }
+
+    function drawPlayer(player, g) {
+        const x = player.centerX;
+        const y = player.centerY;
+        const radius = player.radius;
+
+        const healthRatio = player.health / 100;
+
+        const fillColor = Phaser.Display.Color.Interpolate.ColorWithColor(
+            new Phaser.Display.Color(255, 0, 0),
+            new Phaser.Display.Color(0, 255, 0),
+            100,
+            healthRatio * 100
+        );
+        const finalColor = Phaser.Display.Color.GetColor(fillColor.r, fillColor.g, fillColor.b);
+
+        g.fillStyle(finalColor, 1);
+        g.fillCircle(x, y, radius);
+
+        g.lineStyle(2, 0xffffff);
+        g.strokeCircle(x, y, radius);
+
+        // Draw direction line
+        g.lineStyle(2, 0xffffff);
+        g.beginPath();
+        g.moveTo(player.centerX, player.centerY);
+        g.lineTo(player.pointerX, player.pointerY);
+        g.strokePath();
     }
 </script>
 

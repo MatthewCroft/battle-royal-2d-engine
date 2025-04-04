@@ -9,10 +9,12 @@ export class PlayerManager {
         this.pointerY = player.pointerY;
         this.centerX = player.centerX;
         this.centerY = player.centerY;
-        this.radius = player.radius
+        this.radius = player.radius;
+        this.collisionCorrectionTime = 0;
     }
 
     updateInput(keys, pointer) {
+        if (performance.now() < this.collisionCorrectionTime) return;
         const prevX = this.centerX;
         const prevY = this.centerY;
         let currentX = this.centerX;
