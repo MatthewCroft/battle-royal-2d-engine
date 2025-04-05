@@ -16,6 +16,7 @@ public class GameInstance {
     public final ReadWriteLock lock = new ReentrantReadWriteLock();
     public List<Bullet> bullets = new CopyOnWriteArrayList<>();
     public Map<String, Player> players = new HashMap<>();
+    public Zone zone = new Zone("zone", 300, 300, 70);
 
     public GameInstance(QuadTree tree) {
         this.tree = tree;

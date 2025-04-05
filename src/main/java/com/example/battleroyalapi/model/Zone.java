@@ -7,6 +7,8 @@ public class Zone extends QuadTreeObject {
     double centerX;
     double centerY;
     double radius;
+    public String player;
+    public double time;
 
     public Zone(String id, double centerX, double centerY, double radius) {
         super(id, new Bounds(centerX - radius, centerY - radius, radius * 2, radius * 2), ObjectType.ZONE);

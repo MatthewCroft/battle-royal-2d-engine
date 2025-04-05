@@ -103,16 +103,22 @@ public class QuadTreeService {
 
     public void createSimpleQuadTree(String uuid) {
         GameInstance instance = gameManager.getOrCreate(uuid);
-        instance.tree.insert(new Wall("left-corner-horizontal", new Bounds(100, 430, 70, 20)));
-        instance.tree.insert(new Wall("left-corner-vertical", new Bounds(150, 450, 20, 50)));
+        instance.lock.writeLock().lock();
+        try {
+            instance.tree.insert(new Wall("left-corner-horizontal", new Bounds(100, 430, 70, 20)));
+            instance.tree.insert(new Wall("left-corner-vertical", new Bounds(150, 450, 20, 50)));
 
-        // 600, 0
-        // 400, 130
-        // 450, 150 center
-        instance.tree.insert(new Wall("right-corner-vertical", new Bounds(430, 100, 20, 70)));
-        instance.tree.insert(new Wall("right-corner-horizontal", new Bounds(450, 150, 50, 20)));
-        instance.tree.insert(new Wall("middle-protection", new Bounds(285, 285, 30, 30)));
+            // 600, 0
+            // 400, 130
+            // 450, 150 center
+            instance.tree.insert(new Wall("right-corner-vertical", new Bounds(430, 100, 20, 70)));
+            instance.tree.insert(new Wall("right-corner-horizontal", new Bounds(450, 150, 50, 20)));
+            instance.tree.insert(new Wall("middle-protection", new Bounds(285, 285, 30, 30)));
 
-        instance.tree.insert(new Zone("zone", 300, 300, 70));
+            instance.tree.insert(instance.zone);
+        } finally {
+            instance.lock.writeLock().unlock();
+        }
+
     }
 }

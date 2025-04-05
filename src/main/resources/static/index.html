@@ -88,7 +88,6 @@
                     centerX: 40.0,
                     centerY: 570.0,
                     radius: 20.0,
-                    zoneTime: 0
                 }
                 const opponent = {
                     type: "PLAYER",
@@ -100,7 +99,6 @@
                     centerX: 30.0,
                     centerY: 30.0,
                     radius: 20.0,
-                    zoneTime: 0
                 }
 
                 await fetch(`/api/quadtree/${uuid}/start`, {
@@ -222,6 +220,12 @@
     function drawZone(zone, g) {
         g.lineStyle(2, 0xffffff); // thickness = 2, color = white
         g.strokeCircle(zone.centerX, zone.centerY, zone.radius);
+        const progress = zone.time / 10;
+
+        g.lineStyle(4, 0x00ff00);
+        g.beginPath();
+        g.arc(zone.centerX, zone.centerY, zone.radius, -Math.PI/2, -Math.PI/2 + Math.PI * 2 * progress, false);
+        g.strokePath();
     }
 
     function drawWall(wall, g) {
