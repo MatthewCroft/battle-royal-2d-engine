@@ -13,8 +13,7 @@ public class GameManager {
     public Map<String, GameInstance> map = new ConcurrentHashMap<>();
 
     public GameInstance getOrCreate(String name) {
-        return map.computeIfAbsent(name, id ->
-                new GameInstance(new QuadTree(new Bounds(0, 0, 600, 600))));
+        return map.computeIfAbsent(name, id -> new GameInstance());
     }
 
     public Collection<GameInstance> getGames() {

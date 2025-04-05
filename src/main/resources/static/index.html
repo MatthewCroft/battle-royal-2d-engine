@@ -42,7 +42,9 @@
     //todo: update so that we are using uuid's for querying the correct game instance
     function create() {
         this.graphics = this.add.graphics();
-        this.treeData = null;
+        this.playerTreeData = null;
+        this.bulletTreeData = null;
+        this.wallTreeData = null;
         this.playerManager = null;
         this.bulletManager = null;
         this.isReady = false;
@@ -139,17 +141,31 @@
         keys = this.input.keyboard.addKeys('W,A,S,D');
         // this.input.on("pointermove", async (pointer) => movePlayerPointer(pointer));
         pointer = this.input.activePointer;
-        setInterval(() => syncWithServer(this), 50);
+        setInterval(() => syncPlayersServer(this), 50);
+        setInterval(() => syncWallServer(this), 50);
+        setInterval(() => syncBulletServer(this), 50);
     }
 
-    async function syncWithServer(scene) {
-        const response = await fetch(`/api/quadtree/${uuid}`)
+    async function syncPlayersServer(scene) {
+        const response = await fetch(`/api/quadtree/${uuid}/player`)
         const treeData = await response.json();
-        scene.treeData = treeData;
+        scene.playerTreeData = treeData;
         const serverPlayer = treeData.objects.find(object => object && object.id === scene.playerManager.id)
         if (serverPlayer) {
             scene.playerManager.updateFromServer(serverPlayer);
         }
+    }
+
+    async function syncBulletServer(scene) {
+        const response = await fetch(`/api/quadtree/${uuid}/bullet`)
+        const treeData = await response.json();
+        scene.bulletTreeData = treeData;
+    }
+
+    async function syncWallServer(scene) {
+        const response = await fetch(`/api/quadtree/${uuid}/wall`)
+        const treeData = await response.json();
+        scene.wallTreeData = treeData;
     }
 
     function update() {
@@ -159,8 +175,16 @@
         // Redraw player and line
         this.graphics.clear();
 
-        if (this.treeData) {
-            drawTree(this.graphics, this.treeData, this);
+        if (this.playerTreeData) {
+            drawPlayerTree(this.graphics, this.playerTreeData, this);
+        }
+
+        if (this.bulletTreeData) {
+            drawBulletTree(this.graphics, this.bulletTreeData, this);
+        }
+
+        if (this.wallTreeData) {
+            drawWallTree(this.graphics, this.wallTreeData, this);
         }
 
         this.bulletManager.update(this.barriers, this.opponents);
@@ -168,7 +192,7 @@
         this.playerManager.draw(this.graphics);
     }
 
-    function drawTree(g, tree, scene) {
+    function drawPlayerTree(g, tree, scene) {
         if (tree.objects) {
             for (let obj of tree.objects) {
                 if (!obj) continue;
@@ -181,7 +205,44 @@
                     scene.opponents.set(obj.id, playerCircle);
                     drawPlayer(obj, g);
                 }
+            }
 
+            if (tree.children) {
+                for (let child of tree.children) {
+                    drawPlayerTree(g, child, scene);
+                }
+            }
+        }
+    }
+
+    function drawWallTree(g, tree, scene) {
+        if (tree.objects) {
+            for (let obj of tree.objects) {
+                if (!obj) continue;
+                if (obj.type === "ZONE") {
+                    drawZone(obj, g);
+                }
+
+                if (obj.type === "WALL") {
+                    const wallBounds = new Phaser.Geom.Rectangle(obj.bounds.x, obj.bounds.y, obj.bounds.width, obj.bounds.height);
+                    scene.barriers.set(obj.id, wallBounds);
+                    drawWall(obj, g);
+                }
+            }
+
+            if (tree.children) {
+                for (let child of tree.children) {
+                    drawWallTree(g, child, scene);
+                }
+            }
+        }
+    }
+
+    //todo: update to draw each tree (player, wall, bullet)
+    function drawBulletTree(g, tree, scene) {
+        if (tree.objects) {
+            for (let obj of tree.objects) {
+                if (!obj) continue;
                 // existing bullet set targetX and targetY, signifies the server position of the bullet
                 if (obj.type === "BULLET" && scene.bulletManager.bullets.has(obj.id)) {
                     let bullet = scene.bulletManager.bullets.get(obj.id);
@@ -197,21 +258,11 @@
                         targetY: null
                     })
                 }
-
-                if (obj.type === "ZONE") {
-                    drawZone(obj, g);
-                }
-
-                if (obj.type === "WALL") {
-                    const wallBounds = new Phaser.Geom.Rectangle(obj.bounds.x, obj.bounds.y, obj.bounds.width, obj.bounds.height);
-                    scene.barriers.set(obj.id, wallBounds);
-                    drawWall(obj, g);
-                }
             }
 
             if (tree.children) {
                 for (let child of tree.children) {
-                    drawTree(g, child, scene);
+                    drawBulletTree(g, child, scene);
                 }
             }
         }

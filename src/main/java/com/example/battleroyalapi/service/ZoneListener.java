@@ -21,15 +21,21 @@ public class ZoneListener {
         this.collisionService = collisionService;
     }
 
+    /**
+     * Currently this is the only wall write log the system should have
+     */
     @Scheduled(fixedRate = 16)
     public void zoneTick() {
         for (String key : gameManager.map.keySet()) {
             GameInstance gameInstance = gameManager.map.get(key);
-            gameInstance.lock.writeLock().lock();
-            try {
-                List<QuadTreeObject> intersectingObjects = gameInstance.tree.queryIntersecting(gameInstance.zone);
+            List<QuadTreeObject> intersectingObjects =
+                    gameInstance.playerLock.withRead(zone -> {
+                        return gameInstance.playerTree.queryIntersecting(zone);
+                    }, gameInstance.zone);
+
+            gameInstance.wallLock.withWrite(intersecting -> {
                 List<Player> playersCurrentlyInZone = new ArrayList<>();
-                for (QuadTreeObject object : intersectingObjects) {
+                for (QuadTreeObject object : intersecting) {
                     if (object instanceof Player player &&
                             collisionService.isCircleCircleIntersecting(new Circle(player.getCenterX(), player.getCenterY(), player.getRadius()), new Circle(gameInstance.zone.getCenterX(), gameInstance.zone.getCenterY(), gameInstance.zone.getRadius()))) {
                         playersCurrentlyInZone.add(player);
@@ -45,9 +51,7 @@ public class ZoneListener {
                     gameInstance.zone.time += TICK;
                     gameInstance.zone.player = playersCurrentlyInZone.get(0).id;
                 }
-            } finally {
-                gameInstance.lock.writeLock().unlock();
-            }
+            }, intersectingObjects);
         }
     }
 }
