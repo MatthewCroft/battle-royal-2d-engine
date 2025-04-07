@@ -31,10 +31,10 @@ export class PlayerManager {
         if (keys.D.isDown) currentX = this.centerX + this.speed;
 
         const angle = Phaser.Math.Angle.Between(this.centerX, this.centerY, pointer.worldX, pointer.worldY);
-        currentPointerX = this.centerX + Math.cos(angle) * 25;
-        currentPointerY = this.centerY + Math.sin(angle) * 25;
-        const withinBounds = currentX >= 0 && currentX <= 600 &&
-            currentY >= 0 && currentY <= 600;
+        currentPointerX = this.centerX + Math.cos(angle) * 45;
+        currentPointerY = this.centerY + Math.sin(angle) * 45;
+        const withinBounds = currentX >= 0 && currentX <= 1920 &&
+            currentY >= 0 && currentY <= 1080;
         if (withinBounds && (parseInt(currentX) !== parseInt(prevX) || parseInt(currentY) !== parseInt(prevY) ||
             parseInt(prevPointerY) !== parseInt(currentPointerY) || parseInt(prevPointerX) !== parseInt(currentPointerX))) {
             this.sendPlayerMoveUpdate(currentX, currentY,
@@ -98,7 +98,7 @@ export class PlayerManager {
 
     draw(graphics) {
         graphics.fillStyle(0x44ff44);
-        graphics.fillCircle(this.centerX, this.centerY, 20);
+        graphics.fillCircle(this.centerX, this.centerY, this.radius);
 
         // Draw direction line
         graphics.lineStyle(2, 0xffffff);

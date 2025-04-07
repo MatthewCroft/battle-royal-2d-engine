@@ -7,12 +7,18 @@
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
     <style>
-        body {
+        html, body {
             margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
         }
 
         canvas {
             display: block;
+            width: 100vw;
+            height: 100vh;
         }
     </style>
 </head>
@@ -23,9 +29,11 @@
     import { BulletManager } from "./BulletManager.js";
     const config = {
         type: Phaser.AUTO,
-        width: 600,
-        height: 600,
         backgroundColor: '#1e1e1e',
+        scale: {
+            width: 1920,
+            height: 1080
+        },
         scene: {
             create,
             update
@@ -84,13 +92,13 @@
                     type: "PLAYER",
                     id: "matt",
                     health: 100.0,
-                    speed: 2.0,
+                    speed: 4.0,
                     pointerX: 0,
                     pointerY: 0,
-                    centerX: 40.0,
-                    centerY: 570.0,
-                    radius: 20.0,
-                }
+                    centerX: 128.0,
+                    centerY: 1026.0,
+                    radius: 40.0
+                };
                 const opponent = {
                     type: "PLAYER",
                     id: "opponent",

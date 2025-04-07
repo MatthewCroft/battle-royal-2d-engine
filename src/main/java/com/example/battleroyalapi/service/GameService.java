@@ -17,15 +17,13 @@ public class GameService {
     public void createSimpleQuadTree(String uuid) {
         GameInstance instance = gameManager.getOrCreate(uuid);
         instance.wallLock.withWrite(() -> {
-            instance.wallTree.insert(new Wall("left-corner-horizontal", new Bounds(100, 430, 70, 20)));
-            instance.wallTree.insert(new Wall("left-corner-vertical", new Bounds(150, 450, 20, 50)));
+            instance.wallTree.insert(new Wall("left-corner-horizontal", new Bounds(320, 774, 224, 36)));
+            instance.wallTree.insert(new Wall("left-corner-vertical", new Bounds(480, 810, 64, 90)));
 
-            // 600, 0
-            // 400, 130
-            // 450, 150 center
-            instance.wallTree.insert(new Wall("right-corner-vertical", new Bounds(430, 100, 20, 70)));
-            instance.wallTree.insert(new Wall("right-corner-horizontal", new Bounds(450, 150, 50, 20)));
-            instance.wallTree.insert(new Wall("middle-protection", new Bounds(285, 285, 30, 30)));
+            instance.wallTree.insert(new Wall("right-corner-vertical", new Bounds(1376, 180, 64, 126)));
+            instance.wallTree.insert(new Wall("right-corner-horizontal", new Bounds(1440, 270, 160, 36)));
+
+            instance.wallTree.insert(new Wall("middle-protection", new Bounds(912, 513, 96, 54)));
 
             instance.wallTree.insert(instance.zone);
         });

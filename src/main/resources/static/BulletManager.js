@@ -1,14 +1,14 @@
 
 export class BulletManager {
     constructor(treeUUID) {
-        this.speed = 3;
-        this.radius = 4;
+        this.speed = 6;
+        this.radius = 7;
         this.treeUUID = treeUUID;
         this.bullets = new Map();
         this.pendingDeletes = new Set();
     }
     async fireBullet(x, y, angle, bulletId, playerId) {
-        const offset = 30;
+        const offset = 50;
         const bulletX = x + Math.cos(angle) * offset;
         const bulletY = y + Math.sin(angle) * offset;
 
