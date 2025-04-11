@@ -23,6 +23,7 @@ public class Bullet extends QuadTreeObject {
         this.targetX = targetX;
         this.targetY = targetY;
         this.centerX = centerX;
+        this.radius = radius;
         this.centerY = centerY;
         this.player = player;
     }
