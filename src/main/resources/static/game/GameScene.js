@@ -35,6 +35,7 @@ export class GameScene extends Phaser.Scene {
                 if (data.type === "bullet_expired" && this.bulletManager.bullets.has(data.id)) {
                     this.bulletManager.pendingDeletes.add(data.id);
                 }
+
                 // play sound
                 if (data.type === "player_hit") {
                 }
@@ -159,8 +160,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.bulletManager.update(this.barriers, this.opponents);
-        //this.bulletManager.draw(this.graphics);
-        //this.playerManager.draw();
+        this.bulletManager.cleanup();
     }
 
     drawPlayerTree(g, tree) {
@@ -216,8 +216,7 @@ export class GameScene extends Phaser.Scene {
             for (let obj of tree.objects) {
                 if (!obj) continue;
                 // existing bullet set targetX and targetY, signifies the server position of the bullet
-                if (obj.type === "BULLET" && this.bulletManager.bullets.has(obj.id)) {
-                    console.log("updating bullet position");
+                if (obj.type === "BULLET" && this.bulletManager.bullets.has(obj.id) && !this.bulletManager.pendingDeletes.has(obj.id)) {
                     let bullet = this.bulletManager.bullets.get(obj.id);
                     bullet.targetX = obj.centerX;
                     bullet.targetY = obj.centerY;
@@ -268,34 +267,5 @@ export class GameScene extends Phaser.Scene {
 
         g.fillStyle(0x888888); // grey fill color
         g.fillRect(x, y, width, height); // draw the wall
-    }
-
-    drawPlayer(player, g) {
-        const x = player.centerX;
-        const y = player.centerY;
-        const radius = player.radius;
-
-        const healthRatio = player.health / 100;
-
-        const fillColor = Phaser.Display.Color.Interpolate.ColorWithColor(
-            new Phaser.Display.Color(255, 0, 0),
-            new Phaser.Display.Color(0, 255, 0),
-            100,
-            healthRatio * 100
-        );
-        const finalColor = Phaser.Display.Color.GetColor(fillColor.r, fillColor.g, fillColor.b);
-
-        g.fillStyle(finalColor, 1);
-        g.fillCircle(x, y, radius);
-
-        g.lineStyle(2, 0xffffff);
-        g.strokeCircle(x, y, radius);
-
-        // Draw direction line
-        g.lineStyle(2, 0xffffff);
-        g.beginPath();
-        g.moveTo(player.centerX, player.centerY);
-        g.lineTo(player.pointerX, player.pointerY);
-        g.strokePath();
     }
 }
