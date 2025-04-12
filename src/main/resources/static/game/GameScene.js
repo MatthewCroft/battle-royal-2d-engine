@@ -1,5 +1,6 @@
 import { BulletManager } from "./BulletManager.js";
 import {LocalPlayer} from "./LocalPlayer.js";
+import {EnemyPlayer} from "./EnemyPlayer.js";
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -18,6 +19,7 @@ export class GameScene extends Phaser.Scene {
         this.bulletTreeData = null;
         this.wallTreeData = null;
         this.playerManager = null;
+        this.enemyManager = null;
         this.bulletManager = null;
         this.isReady = false;
         this.barriers = new Map();
@@ -65,9 +67,9 @@ export class GameScene extends Phaser.Scene {
                 id: "opponent",
                 health: 100.0,
                 speed: 2.0,
-                centerX: 30.0,
-                centerY: 30.0,
-                radius: 20.0,
+                centerX: 50.0,
+                centerY: 50.0,
+                radius: 40.0,
             }
 
             await fetch(`/api/quadtree/${this.uuid}/start`, {
@@ -86,7 +88,8 @@ export class GameScene extends Phaser.Scene {
                 body: JSON.stringify(player)
             }).then(() => {
                 this.playerManager = new LocalPlayer(this, player, this.uuid)
-                this.bulletManager = new BulletManager(this.uuid);
+                this.bulletManager = new BulletManager(this, this.uuid);
+                this.enemyManager = new EnemyPlayer(this, opponent);
                 console.log("setup complete")
                 this.isReady = true;
             })
@@ -156,8 +159,8 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.bulletManager.update(this.barriers, this.opponents);
-        this.bulletManager.draw(this.graphics);
-        this.playerManager.draw();
+        //this.bulletManager.draw(this.graphics);
+        //this.playerManager.draw();
     }
 
     drawPlayerTree(g, tree) {
@@ -171,7 +174,8 @@ export class GameScene extends Phaser.Scene {
                 if (obj.type === "PLAYER") {
                     const playerCircle = new Phaser.Geom.Circle(obj.centerX, obj.centerY, obj.radius);
                     this.opponents.set(obj.id, playerCircle);
-                    this.drawPlayer(obj, g);
+                    //this.drawPlayer(obj, g);
+                    this.enemyManager.drawEnemy(obj);
                 }
             }
 
@@ -213,6 +217,7 @@ export class GameScene extends Phaser.Scene {
                 if (!obj) continue;
                 // existing bullet set targetX and targetY, signifies the server position of the bullet
                 if (obj.type === "BULLET" && this.bulletManager.bullets.has(obj.id)) {
+                    console.log("updating bullet position");
                     let bullet = this.bulletManager.bullets.get(obj.id);
                     bullet.targetX = obj.centerX;
                     bullet.targetY = obj.centerY;
@@ -220,11 +225,22 @@ export class GameScene extends Phaser.Scene {
 
                 // new bullet
                 if (obj.type === "BULLET" && !this.bulletManager.bullets.has(obj.id)) {
-                    this.bulletManager.bullets.set(obj.id, {
-                        ...obj,
-                        targetX: null,
-                        targetY: null
-                    })
+                    const bullet = this.bulletManager.bulletPool.get();
+                    if (!bullet) return;
+
+                    bullet.setActive(true)
+                        .setVisible(true)
+                        .setPosition(obj.centerX, obj.centerY)
+                        .setFillStyle(0xffff00)
+                        .setRadius(obj.radius);
+
+                    bullet.velocityX = Math.cos(obj.angle) * obj.speed;
+                    bullet.velocityY = Math.sin(obj.angle) * obj.speed;
+                    bullet.targetX = null;
+                    bullet.targetY = null;
+                    bullet.playerId = obj.player;
+
+                    this.bulletManager.bullets.set(obj.id, bullet);
                 }
             }
 

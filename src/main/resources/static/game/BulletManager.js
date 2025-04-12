@@ -1,30 +1,43 @@
 
 export class BulletManager {
-    constructor(treeUUID) {
+    constructor(scene, treeUUID) {
+        this.scene = scene;
         this.speed = 6;
         this.radius = 7;
         this.treeUUID = treeUUID;
+
         this.bullets = new Map();
         this.pendingDeletes = new Set();
+
+        this.bulletPool = this.scene.add.group({
+            classType: Phaser.GameObjects.Arc,
+            maxSize: 100,
+            runChildUpdate: false
+        });
     }
     async fireBullet(x, y, angle, bulletId, playerId) {
         const offset = 50;
         const bulletX = x + Math.cos(angle) * offset;
         const bulletY = y + Math.sin(angle) * offset;
 
-        const bullet = {
-            type: "BULLET",
-            angle,
-            velocityX: Math.cos(angle) * this.speed,
-            velocityY: Math.sin(angle) * this.speed,
-            id: bulletId,
-            targetX: null,
-            targetY: null,
-            centerX: bulletX,
-            centerY: bulletY,
-            radius: this.radius,
-            player: playerId
-        };
+        const bullet = this.bulletPool.get();
+        if (!bullet) return;
+        if (!bullet.scene) {
+            this.scene.add.existing(bullet);
+        }
+
+        bullet.setActive(true)
+            .setVisible(true)
+            .setPosition(bulletX, bulletY)
+            .setFillStyle(0xffff00, 1)
+            .setRadius(this.radius);
+
+        bullet.velocityX = Math.cos(angle) * this.speed;
+        bullet.velocityY = Math.sin(angle) * this.speed;
+        bullet.targetX = null;
+        bullet.targetY = null;
+        bullet.playerId = playerId;
+        bullet.id = bulletId;
 
         this.bullets.set(bulletId, bullet);
 
@@ -33,42 +46,52 @@ export class BulletManager {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(bullet)
-        })
+            body: JSON.stringify({
+                type: "BULLET",
+                angle,
+                id: bulletId,
+                centerX: bulletX,
+                centerY: bulletY,
+                radius: this.radius,
+                velocityX: bullet.velocityX,
+                velocityY: bullet.velocityY,
+                player: playerId
+            })
+        });
     }
 
     update(barriers, opponents) {
         for (let bullet of this.bullets.values()) {
             if (this.pendingDeletes.has(bullet.id)) {
-                this.bullets.delete(bullet.id);
+                this.despawn(bullet.id, bullet);
                 continue;
             }
 
             //todo: update so that server can respawn bullets if intersecting from phaser does not agree with server
-            const bulletCircle = new Phaser.Geom.Circle(bullet.centerX, bullet.centerY, bullet.radius);
+            const bulletCircle = new Phaser.Geom.Circle(bullet.x, bullet.y, bullet.radius);
+
             for (const barrier of barriers.values()) {
                 if (Phaser.Geom.Intersects.CircleToRectangle(bulletCircle, barrier)) {
-                    this.bullets.delete(bullet.id);
+                    this.despawn(bullet.id, bullet);
                     break;
                 }
             }
 
             for (const opponent of opponents.values()) {
                 if (Phaser.Geom.Intersects.CircleToCircle(bulletCircle, opponent)) {
-                    this.bullets.delete(bullet.id);
+                    this.despawn(bullet.id, bullet);
                     break;
                 }
             }
 
             if (!this.bullets.has(bullet.id)) continue;
 
-            bullet.centerX += bullet.velocityX;
-            bullet.centerY += bullet.velocityY;
+            bullet.setPosition(bullet.x + bullet.velocityX, bullet.y + bullet.velocityY);
 
             if (bullet.targetX !== null && bullet.targetY !== null
-                && this.distance(bullet.targetX, bullet.centerX, bullet.targetY, bullet.centerY) > 5) {
-                bullet.centerX = Phaser.Math.Linear(bullet.centerX, bullet.targetX, 0.1);
-                bullet.centerY = Phaser.Math.Linear(bullet.centerY, bullet.targetY, 0.1);
+                && this.distance(bullet.targetX, bullet.x, bullet.targetY, bullet.y) > 5) {
+               bullet.setPosition(Phaser.Math.Linear(bullet.x, bullet.targetX, 0.1),
+                   Phaser.Math.Linear(bullet.y, bullet.targetY, 0.1));
             }
         }
     }
@@ -79,11 +102,10 @@ export class BulletManager {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    draw(graphics) {
-        for (let bullet of this.bullets.values()) {
-            if (this.pendingDeletes.has(bullet.id)) continue;
-            graphics.fillStyle(0xffff00);
-            graphics.fillCircle(bullet.centerX, bullet.centerY, this.radius);
-        }
+    despawn(id, bullet) {
+        bullet.setActive(false);
+        bullet.setVisible(false);
+        this.bulletPool.killAndHide(bullet);
+        this.bullets.delete(id);
     }
 }
