@@ -1,6 +1,9 @@
 import { BulletManager } from "./BulletManager.js";
 import {LocalPlayer} from "./LocalPlayer.js";
 import {EnemyPlayer} from "./EnemyPlayer.js";
+import {FeedbackManager} from "../components/FeedbackManager.js";
+import {ZoneManager} from "./ZoneManager.js";
+import {WallBlock} from "./WallBlock.js";
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -12,6 +15,15 @@ export class GameScene extends Phaser.Scene {
         this.pointer = null;
     }
 
+    preload() {
+        this.load.audio('hit', '../assets/enemydamage.wav');
+        this.load.audio('damage', '../assets/localplayerdamage.wav');
+        this.load.audio('players-collision', '../assets/playerplayercollision.wav');
+        this.load.audio('wall-collision', '../assets/playerwallcollision.wav');
+        this.load.audio('shot', '../assets/shot.wav');
+        this.load.audio('zone', '../assets/beepingzone.wav');
+    }
+
     //todo: update so that we are using uuid's for querying the correct game instance
     create() {
         this.graphics = this.add.graphics();
@@ -21,9 +33,12 @@ export class GameScene extends Phaser.Scene {
         this.playerManager = null;
         this.enemyManager = null;
         this.bulletManager = null;
+        this.zoneManager = new ZoneManager(this, 960, 540, 175);
+        this.feedbackManager = new FeedbackManager(this);
         this.isReady = false;
         this.barriers = new Map();
         this.opponents = new Map();
+        this.wallblocks = new Map();
 
         const socket = new SockJS('/ws');
         const stompClient = Stomp.over(socket);
@@ -31,17 +46,27 @@ export class GameScene extends Phaser.Scene {
         stompClient.connect({}, () => {
             stompClient.subscribe(`/topic/${this.uuid}`, (message) => {
                 const data = JSON.parse(message.body);
-
                 if (data.type === "bullet_expired" && this.bulletManager.bullets.has(data.id)) {
                     this.bulletManager.pendingDeletes.add(data.id);
                 }
 
                 // play sound
-                if (data.type === "player_hit") {
+                if (data.type === "player_hit" && data.victim === this.playerManager.id) {
+                    this.feedbackManager.localPlayerDamage(this.playerManager);
                 }
 
-                if (data.type === "player_collision" || data.type === "out_of_bounds" || data.type === "wall_collision") {
+                if (data.type === "player_hit" && data.victim === this.enemyManager.id) {
+                   this.feedbackManager.enemyPlayerDamage(this.enemyManager);
+                }
+
+                if (data.type === "player_collision") {
                     this.playerManager.collisionCorrectionTime = performance.now() + 75;
+                    this.feedbackManager.playersCollision(data);
+                }
+
+                if (data.type === "out_of_bounds" || data.type === "wall_collision") {
+                    this.playerManager.collisionCorrectionTime = performance.now() + 75;
+                    this.feedbackManager.wallCollision(data);
                 }
             });
         });
@@ -102,6 +127,7 @@ export class GameScene extends Phaser.Scene {
                 this.pointer.worldX, this.pointer.worldY
             );
             this.bulletManager.fireBullet(this.playerManager.x, this.playerManager.y, angle, self.crypto.randomUUID(), this.playerManager.id);
+            this.feedbackManager.shootBullet();
         })
 
         // draw game board boundary (same as QuadTree visualizer size)
@@ -156,7 +182,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (this.wallTreeData) {
-            this.drawWallTree(this.graphics, this.wallTreeData);
+            this.drawWallTree(this.graphics, this.wallTreeData, this);
         }
 
         this.bulletManager.update(this.barriers, this.opponents);
@@ -187,18 +213,18 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    drawWallTree(g, tree) {
+    drawWallTree(g, tree, scene) {
         if (tree.objects) {
             for (let obj of tree.objects) {
                 if (!obj) continue;
                 if (obj.type === "ZONE") {
-                    this.drawZone(obj, g);
+                    scene.zoneManager.updateFromServer(obj);
                 }
 
-                if (obj.type === "WALL") {
+                if (obj.type === "WALL" && !scene.wallblocks.has(obj.id)) {
                     const wallBounds = new Phaser.Geom.Rectangle(obj.bounds.x, obj.bounds.y, obj.bounds.width, obj.bounds.height);
                     this.barriers.set(obj.id, wallBounds);
-                    this.drawWall(obj, g);
+                    scene.wallblocks.set(obj.id, new WallBlock(scene, obj.bounds.x, obj.bounds.y, obj.bounds.width, obj.bounds.height, obj.id));
                 }
             }
 
@@ -251,10 +277,14 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    drawZone(zone, g) {
+    drawZone(zone, g, scene) {
         g.lineStyle(2, 0xffffff); // thickness = 2, color = white
         g.strokeCircle(zone.centerX, zone.centerY, zone.radius);
         const progress = zone.time / 10;
+
+        if (progress > 0) {
+            scene.feedbackManager.zoneTick();
+        }
 
         g.lineStyle(4, 0x00ff00);
         g.beginPath();

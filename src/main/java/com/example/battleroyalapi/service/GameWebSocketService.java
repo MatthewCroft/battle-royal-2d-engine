@@ -60,7 +60,7 @@ public class GameWebSocketService {
         messagingTemplate.convertAndSend(
                 "/topic/" + gameId,
                 Map.of("type", "player_hit",
-                        "victim", String.format("%s", victim),
+                        "victim", String.format("%s", victim.id),
                         "shooter", String.format("%s", shooter))
         );
     }
