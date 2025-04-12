@@ -7,20 +7,22 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 public class Player extends QuadTreeObject {
     public double health;
     double speed;
-    double pointerX;
-    double pointerY;
     double radius;
     public double centerX;
     public double centerY;
-    public Player(String id, double health, double speed, double pointerX, double pointerY, double centerX, double centerY, double radius) {
+    public double angle;
+    public Player(String id, double health, double speed, double centerX, double centerY, double radius, double angle) {
         super(id, new Bounds(centerX - radius, centerY - radius, radius * 2, radius * 2), ObjectType.PLAYER);
         this.health = health;
         this.speed = speed;
-        this.pointerX = pointerX;
-        this.pointerY = pointerY;
         this.radius = radius;
         this.centerX = centerX;
         this.centerY  = centerY;
+        this.angle = angle;
+    }
+
+    public double getAngle() {
+        return angle;
     }
 
     public double getHealth() {
@@ -29,14 +31,6 @@ public class Player extends QuadTreeObject {
 
     public double getSpeed() {
         return speed;
-    }
-
-    public double getPointerX() {
-        return pointerX;
-    }
-
-    public double getPointerY() {
-        return pointerY;
     }
 
     public double getRadius() {

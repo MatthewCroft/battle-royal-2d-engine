@@ -42,6 +42,34 @@ public class PlayerService {
 
     public void movePlayer(String id, Player player) {
         GameInstance gameInstance = gameManager.getOrCreate(id);
+        List<QuadTreeObject> collisions = gameInstance.wallLock.withRead(p -> {
+            return gameInstance.wallTree.queryIntersecting(p);
+        }, player);
+
+        gameInstance.playerLock.withRead(p -> {
+           collisions.addAll(gameInstance.playerTree.queryIntersecting(p));
+        }, player);
+
+        for (QuadTreeObject collision : collisions) {
+            switch(collision.type) {
+                case ObjectType.WALL -> {
+                    if (collisionService.isCircleRectangleInsecting(new Circle(player.getCenterX(), player.getCenterY(), player.getRadius()), new Rectangle(collision.bounds.getX(), collision.bounds.getY(), collision.bounds.getHeight(), collision.bounds.getWidth()))) {
+                        gameInstance.players.put(player.id, player);
+                        gameWebSocketService.sendWallCollision(id, player, (Wall) collision);
+                        return;
+                    }
+                }
+                case ObjectType.PLAYER -> {
+                    Player opponent = (Player) collision;
+                    if (collisionService.isCircleCircleIntersecting(new Circle(player.getCenterX(), player.getCenterY(), player.getRadius()), new Circle(opponent.getCenterX(), opponent.getCenterY(), opponent.getRadius()))) {
+                        gameWebSocketService.sendPlayerCollision(id, player, opponent);
+                        gameInstance.players.put(player.id, player);
+                        return;
+                    }
+                }
+                default -> System.out.println("Player collisions not a valid type");
+            }
+        }
 
         gameInstance.playerLock.withWrite((quadTreeId, movingPlayer) -> {
             Player previousPlayer = gameInstance.players.get(movingPlayer.id);
@@ -59,38 +87,7 @@ public class PlayerService {
                 return;
             }
 
-            List<QuadTreeObject> collisions = gameInstance.wallLock.withRead(p -> {
-                return gameInstance.wallTree.queryIntersecting(p);
-            }, movingPlayer);
-            collisions.addAll(gameInstance.playerTree.queryIntersecting(movingPlayer));
-
-            if (collisions.isEmpty()) {
-                gameInstance.players.put(player.id, player);
-                return;
-            }
-
-            for (QuadTreeObject collision : collisions) {
-                switch(collision.type) {
-                    case ObjectType.WALL -> {
-                        if (collisionService.isCircleRectangleInsecting(new Circle(movingPlayer.getCenterX(), movingPlayer.getCenterY(), movingPlayer.getRadius()), new Rectangle(collision.bounds.getX(), collision.bounds.getY(), collision.bounds.getHeight(), collision.bounds.getWidth()))) {
-                            gameInstance.playerTree.remove(movingPlayer);
-                            gameInstance.playerTree.insert(previousPlayerPosition);
-                            gameInstance.players.put(previousPlayerPosition.id, (Player) previousPlayerPosition);
-                            gameWebSocketService.sendWallCollision(quadTreeId, (Player)previousPlayerPosition, (Wall) collision);
-                        }
-                    }
-                    case ObjectType.PLAYER -> {
-                        Player opponent = (Player) collision;
-                        if (collisionService.isCircleCircleIntersecting(new Circle(movingPlayer.getCenterX(), movingPlayer.getCenterY(), movingPlayer.getRadius()), new Circle(opponent.getCenterX(), opponent.getCenterY(), opponent.getRadius()))) {
-                            gameWebSocketService.sendPlayerCollision(quadTreeId, (Player)previousPlayerPosition, opponent);
-                            gameInstance.playerTree.remove(movingPlayer);
-                            gameInstance.playerTree.insert(previousPlayerPosition);
-                            gameInstance.players.put(previousPlayerPosition.id, (Player) previousPlayerPosition);
-                        }
-                    }
-                    default -> gameInstance.players.put(movingPlayer.id, movingPlayer);
-                }
-            }
+            gameInstance.players.put(movingPlayer.id, movingPlayer);
         }, id, player);
     }
 

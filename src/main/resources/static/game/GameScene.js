@@ -1,5 +1,5 @@
-import { PlayerManager } from './PlayerManager.js'
 import { BulletManager } from "./BulletManager.js";
+import {LocalPlayer} from "./LocalPlayer.js";
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -38,8 +38,7 @@ export class GameScene extends Phaser.Scene {
                 }
 
                 if (data.type === "player_collision" || data.type === "out_of_bounds" || data.type === "wall_collision") {
-                    this.playerManager = new PlayerManager(data.player, this.uuid);
-                    this.playerManager.collisionCorrectionTime = performance.now() + 50;
+                    this.playerManager.collisionCorrectionTime = performance.now() + 75;
                 }
             });
         });
@@ -57,8 +56,6 @@ export class GameScene extends Phaser.Scene {
                 id: "matt",
                 health: 100.0,
                 speed: 4.0,
-                pointerX: 0,
-                pointerY: 0,
                 centerX: 128.0,
                 centerY: 1026.0,
                 radius: 40.0
@@ -68,8 +65,6 @@ export class GameScene extends Phaser.Scene {
                 id: "opponent",
                 health: 100.0,
                 speed: 2.0,
-                pointerX: 0,
-                pointerY: 0,
                 centerX: 30.0,
                 centerY: 30.0,
                 radius: 20.0,
@@ -90,7 +85,7 @@ export class GameScene extends Phaser.Scene {
                 },
                 body: JSON.stringify(player)
             }).then(() => {
-                this.playerManager = new PlayerManager(player, this.uuid)
+                this.playerManager = new LocalPlayer(this, player, this.uuid)
                 this.bulletManager = new BulletManager(this.uuid);
                 console.log("setup complete")
                 this.isReady = true;
@@ -99,10 +94,10 @@ export class GameScene extends Phaser.Scene {
 
         this.input.on("pointerdown", () => {
             const angle = Phaser.Math.Angle.Between(
-                this.playerManager.centerX, this.playerManager.centerY,
+                this.playerManager.x, this.playerManager.y,
                 this.pointer.worldX, this.pointer.worldY
             );
-            this.bulletManager.fireBullet(this.playerManager.centerX, this.playerManager.centerY, angle, self.crypto.randomUUID(), this.playerManager.id);
+            this.bulletManager.fireBullet(this.playerManager.x, this.playerManager.y, angle, self.crypto.randomUUID(), this.playerManager.id);
         })
 
         // draw game board boundary (same as QuadTree visualizer size)
@@ -113,6 +108,7 @@ export class GameScene extends Phaser.Scene {
         this.keys = this.input.keyboard.addKeys('W,A,S,D');
         // this.input.on("pointermove", async (pointer) => movePlayerPointer(pointer));
         this.pointer = this.input.activePointer;
+
         setInterval(() => this.syncPlayersServer(this), 50);
         setInterval(() => this.syncWallServer(this), 50);
         setInterval(() => this.syncBulletServer(this), 50);
@@ -161,7 +157,7 @@ export class GameScene extends Phaser.Scene {
 
         this.bulletManager.update(this.barriers, this.opponents);
         this.bulletManager.draw(this.graphics);
-        this.playerManager.draw(this.graphics);
+        this.playerManager.draw();
     }
 
     drawPlayerTree(g, tree) {
