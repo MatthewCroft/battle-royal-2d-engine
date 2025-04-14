@@ -5,6 +5,7 @@ import com.example.battleroyalapi.quadtree.QuadTree;
 import com.example.battleroyalapi.quadtree.QuadTreeObject;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class QuadTreeResponse {
@@ -28,6 +29,19 @@ public class QuadTreeResponse {
         }
 
         return quadTreeResponse;
+    }
+
+    public static void fromQuadTree(QuadTree tree, List<QuadTreeObject> objects) {
+        if (!tree.objects.isEmpty()) {
+            objects.addAll(tree.objects);
+        }
+
+        if (tree.subdivide) {
+            fromQuadTree(tree.nw, objects);
+            fromQuadTree(tree.ne, objects);
+            fromQuadTree(tree.sw, objects);
+            fromQuadTree(tree.se, objects);
+        }
     }
 
     public Bounds getBounds() {

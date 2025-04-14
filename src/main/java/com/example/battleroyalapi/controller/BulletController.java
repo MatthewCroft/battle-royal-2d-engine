@@ -3,11 +3,15 @@ package com.example.battleroyalapi.controller;
 import com.example.battleroyalapi.model.Bullet;
 import com.example.battleroyalapi.model.GameInstance;
 import com.example.battleroyalapi.model.QuadTreeResponse;
+import com.example.battleroyalapi.quadtree.QuadTreeObject;
 import com.example.battleroyalapi.service.GameService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @RestController
@@ -34,9 +38,10 @@ public class BulletController {
     }
 
     @GetMapping("{id}/bullet")
-    public ResponseEntity<QuadTreeResponse> getBulletTree(@PathVariable String id) {
+    public ResponseEntity<List<QuadTreeObject>> getBulletTree(@PathVariable String id) {
         GameInstance gameInstance = gameService.getGameInstance(id);
-        QuadTreeResponse response = QuadTreeResponse.fromQuadTree(gameInstance.bulletTree);
-        return ResponseEntity.ok(response);
+        List<QuadTreeObject> bullets = new ArrayList<>();
+        QuadTreeResponse.fromQuadTree(gameInstance.bulletTree, bullets);
+        return ResponseEntity.ok(bullets);
     }
 }

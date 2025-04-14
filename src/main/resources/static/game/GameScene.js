@@ -200,7 +200,6 @@ export class GameScene extends Phaser.Scene {
                 if (obj.type === "PLAYER") {
                     const playerCircle = new Phaser.Geom.Circle(obj.centerX, obj.centerY, obj.radius);
                     this.opponents.set(obj.id, playerCircle);
-                    //this.drawPlayer(obj, g);
                     this.enemyManager.drawEnemy(obj);
                 }
             }

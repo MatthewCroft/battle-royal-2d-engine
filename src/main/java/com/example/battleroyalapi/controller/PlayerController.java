@@ -5,11 +5,15 @@ import com.example.battleroyalapi.model.GameInstance;
 import com.example.battleroyalapi.model.Player;
 import com.example.battleroyalapi.model.QuadTreeResponse;
 import com.example.battleroyalapi.quadtree.QuadTree;
+import com.example.battleroyalapi.quadtree.QuadTreeObject;
 import com.example.battleroyalapi.service.PlayerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Game board
@@ -27,10 +31,11 @@ public class PlayerController {
     }
 
     @GetMapping(value = "/{id}/player")
-    public ResponseEntity<QuadTreeResponse> getQuadTree(@PathVariable String id) {
+    public ResponseEntity<List<QuadTreeObject>> getQuadTree(@PathVariable String id) {
         QuadTree quadTree = playerService.getPlayerQuadTree(id);
-        QuadTreeResponse response = QuadTreeResponse.fromQuadTree(quadTree);
-        return ResponseEntity.ok(response);
+        List<QuadTreeObject> players = new ArrayList<>();
+        QuadTreeResponse.fromQuadTree(quadTree, players);
+        return ResponseEntity.ok(players);
     }
 
     @PutMapping("/{id}/player")
