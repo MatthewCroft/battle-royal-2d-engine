@@ -72,7 +72,7 @@ public class GameWebSocketService {
         logger.info("[OutOfBounds] QuadTree={}, Player={} attempted to move out of bounds, repositioning at x={}, y={}", gameId, previousPlayerPosition.id, previousPlayerPosition.getCenterX(), previousPlayerPosition.getCenterY());
 
         messagingTemplate.convertAndSend(
-                "/topic/events" + gameId,
+                String.format("/topic/%s/events", gameId),
                 Map.of("type", "out_of_bounds",
                         "player", previousPlayerPosition)
         );
@@ -84,5 +84,13 @@ public class GameWebSocketService {
 
     public void sendZoneUpdate(String gameId, Zone zone) {
         messagingTemplate.convertAndSend(String.format("/topic/%s/zone", gameId), zone);
+    }
+
+    public void sendPlayerPositionUpdate(String id, Player player) {
+        messagingTemplate.convertAndSend(String.format("/topic/%s/player", id), player);
+    }
+
+    public void sendPlayerCorrectionPositionUpdate(String id, Player player) {
+        messagingTemplate.convertAndSend(String.format("/topic/%s/player/correction", id), player);
     }
 }

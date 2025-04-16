@@ -34,8 +34,6 @@ public class ZoneListener {
             GameInstance gameInstance = gameManager.map.get(key);
             List<QuadTreeObject> intersectingObjects = playerService.playersIntersecting(gameInstance, gameInstance.zone);
 
-            if (intersectingObjects.isEmpty()) continue;
-
             gameInstance.wallLock.withWrite(intersecting -> {
                 List<Player> playersCurrentlyInZone = new ArrayList<>();
                 for (QuadTreeObject object : intersecting) {
