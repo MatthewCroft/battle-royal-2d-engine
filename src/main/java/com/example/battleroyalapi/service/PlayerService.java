@@ -91,8 +91,20 @@ public class PlayerService {
         }, id, player);
     }
 
+    public void playerHitDamage(GameInstance gameInstance, Player player) {
+        gameInstance.playerLock.withWrite(playerHit -> {
+            playerHit.health -= 10;
+        }, player);
+    }
+
     public QuadTree getPlayerQuadTree(String id) {
         GameInstance gameInstance = gameManager.map.get(id);
         return gameInstance.playerTree;
+    }
+
+    public List<QuadTreeObject> playersIntersecting(GameInstance gameInstance, QuadTreeObject quadTreeObject) {
+        return gameInstance.playerLock.withRead(treeObject -> {
+            return gameInstance.playerTree.queryIntersecting(treeObject);
+        }, quadTreeObject);
     }
 }

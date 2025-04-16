@@ -14,11 +14,15 @@ import java.util.Set;
 public class ZoneListener {
     private GameManager gameManager;
     private CollisionService collisionService;
+    private PlayerService playerService;
+    private GameWebSocketService gameWebSocketService;
     private final double TICK = 0.016;
 
-    public ZoneListener(GameManager gameManager, CollisionService collisionService) {
+    public ZoneListener(GameManager gameManager, CollisionService collisionService, PlayerService playerService, GameWebSocketService gameWebSocketService) {
         this.gameManager = gameManager;
         this.collisionService = collisionService;
+        this.playerService = playerService;
+        this.gameWebSocketService = gameWebSocketService;
     }
 
     /**
@@ -28,10 +32,9 @@ public class ZoneListener {
     public void zoneTick() {
         for (String key : gameManager.map.keySet()) {
             GameInstance gameInstance = gameManager.map.get(key);
-            List<QuadTreeObject> intersectingObjects =
-                    gameInstance.playerLock.withRead(zone -> {
-                        return gameInstance.playerTree.queryIntersecting(zone);
-                    }, gameInstance.zone);
+            List<QuadTreeObject> intersectingObjects = playerService.playersIntersecting(gameInstance, gameInstance.zone);
+
+            if (intersectingObjects.isEmpty()) continue;
 
             gameInstance.wallLock.withWrite(intersecting -> {
                 List<Player> playersCurrentlyInZone = new ArrayList<>();
@@ -52,6 +55,15 @@ public class ZoneListener {
                     gameInstance.zone.player = playersCurrentlyInZone.get(0).id;
                 }
             }, intersectingObjects);
+        }
+    }
+
+    @Scheduled(fixedRate = 50)
+    public void zoneUpdateToClient() {
+        for (String key : gameManager.map.keySet()) {
+            GameInstance gameInstance = gameManager.map.get(key);
+            Zone zone = gameInstance.wallLock.withRead(() -> gameInstance.zone);
+            gameWebSocketService.sendZoneUpdate(key, zone);
         }
     }
 }
